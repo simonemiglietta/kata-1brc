@@ -1,0 +1,5 @@
+# IDE
+.idea
+
+# full dataset
+data/measurements.txt
