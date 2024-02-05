@@ -19,6 +19,7 @@ Each script must have these characteristics:
 
 * fully contained in the folder `src/<script-name>`
 * work as a shell command, without a GUI
+* has not explicit error handling (job boundaries are predetermined and well defined)
 * explain build and run instructions in a `README.md` file
 * represent the work in progress updated every second (or more, in order to not interfere significantly with total
   execution time)
@@ -28,8 +29,8 @@ Each script must have these characteristics:
 
 ## Results
 
-| Name       | Language | Algorithm notes | Exec Time | Memory Used |
-|------------|----------|-----------------|-----------|-------------|
-| ScriptName | Italiano | Placeholder row | Tanto     | Poco        |
+| Script | Language | Algorithm notes   | Exec Time | Memory Used |
+|--------|----------|-------------------|-----------|-------------|
+| PHP    | PHP      | Simple with Yield | Tanto     | Poco        |
 
-Each script is evaluated by the shell command `/usr/bin/time -f "%E %M" <command>`.
+Each script is evaluated by the shell command `/usr/bin/time -f "time: %E - memory: %M" <command>`.
