@@ -10,8 +10,10 @@ algorithms.
 Working data are included in `data` folder. But this repository cannot include the full set of data because 1 billion
 rows take around 15 GB of disk space.
 
-Instead, `data` folder includes a sample list of distinct weather stations and a tool that can be used to generate the
-full samples list over 10 thousand stations.
+Instead, `data` folder includes a sample list of distinct weather stations and a several tools that can be used to
+generate the full samples list over 10 thousand stations.
+
+In folder `data/generators` you can find several tools. At this moment, the only one fully working is the Python one.
 
 ## Scripts prerequisites
 
@@ -32,4 +34,5 @@ Each script must have these characteristics:
 |------------|----------|-----------------|-----------|-------------|
 | ScriptName | Italiano | Placeholder row | Tanto     | Poco        |
 
-Each script is evaluated by the shell command `/usr/bin/time -f "%E %M" <command>`.
+Each script is evaluated by the shell command `/usr/bin/time -f "%E %M" <command>`. Pay attention: you have to use
+the `time` linux program, not the shell command! 
