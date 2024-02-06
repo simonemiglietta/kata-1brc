@@ -31,11 +31,12 @@ Each script must have these characteristics:
 
 ## Results
 
-All the tests have been performed on a Dell Inspiron 5502 PC (CPU  i7-1165G7 4 core 8 thread, RAM 12 GB)
+All the tests have been performed on a Dell Inspiron 5502 PC (CPU i7-1165G7 4 core 8 thread, RAM 12 GB)
 
 | Script | Language | Algorithm notes   | Exec Time | Memory Used |
 |--------|----------|-------------------|-----------|-------------|
 | PHP    | PHP      | Simple with Yield | Tanto     | Poco        |
+| go-seq | Go       | Full sequantial   | 3.24.50   | 11104       |
 
 Each script is evaluated by the shell command `/usr/bin/time -f "time: %E - memory: %M" <command>`. Pay attention: you
 have to use the `time` linux program, not the shell command!
