@@ -21,18 +21,23 @@ Each script must have these characteristics:
 
 * fully contained in the folder `src/<script-name>`
 * work as a shell command, without a GUI
+* has not explicit error handling (job boundaries are predetermined and well defined)
 * explain build and run instructions in a `README.md` file
 * represent the work in progress updated every second (or more, in order to not interfere significantly with total
   execution time)
 * a progress bar will be very appreciated
 * read data from `data/measurements.txt` and write results in its own folder (script folder)
-* test over data samples provided in `data/testcases` folder
+* test against data samples provided in `data/testcases` folder
 
 ## Results
 
-| Name       | Language | Algorithm notes | Exec Time | Memory Used |
-|------------|----------|-----------------|-----------|-------------|
-| ScriptName | Italiano | Placeholder row | Tanto     | Poco        |
+All the tests have been performed on a Dell Inspiron 5502 PC (CPU  i7-1165G7 4 core 8 thread, RAM 12 GB)
 
-Each script is evaluated by the shell command `/usr/bin/time -f "%E %M" <command>`. Pay attention: you have to use
-the `time` linux program, not the shell command! 
+| Script | Language | Algorithm notes   | Exec Time | Memory Used |
+|--------|----------|-------------------|-----------|-------------|
+| PHP    | PHP      | Simple with Yield | Tanto     | Poco        |
+
+Each script is evaluated by the shell command `/usr/bin/time -f "time: %E - memory: %M" <command>`. Pay attention: you
+have to use the `time` linux program, not the shell command!
+
+All the tests used to fill the above table are listed in `data/rinnings.csv` file. 
