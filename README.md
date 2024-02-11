@@ -35,7 +35,8 @@ All the tests have been performed on a Dell Inspiron 5502 PC (CPU i7-1165G7 4 co
 
 | Script | Language | Algorithm notes   |     Time | Memory | Note                               |
 |--------|----------|-------------------|---------:|-------:|------------------------------------|
-| PHP    | PHP      | Simple with Yield | 11:44.29 |  28544 | Data taken on the second run (JIT) |
+| php    | PHP      | Simple with Yield | 11:44.29 |  28544 | Data taken on the second run (JIT) |
+| go-seq | Go       | Full sequential   |  3.24.50 |  11104 |                                    |
 
 Each script is evaluated by the shell command `/usr/bin/time -f "time: %E - memory: %M" <command>`. Pay attention: you
 have to use the `time` linux program, not the shell command!
