@@ -10,7 +10,7 @@ import (
 
 func Parser(sf string, df string, i *int) {
 	// todo: make map of reference
-	aggregates := make(map[string]model.StationAggregate)
+	aggregates := make(map[string]*model.StationAggregate)
 
 	srcFile, _ := os.Open(sf)
 	defer srcFile.Close()
@@ -28,9 +28,9 @@ func Parser(sf string, df string, i *int) {
 
 		if exist {
 			a.AddDetection(d)
-			aggregates[d.Station] = a
 		} else {
-			aggregates[d.Station] = model.NewStationAggregateFromDetection(d)
+			a := model.NewStationAggregateFromDetection(d)
+			aggregates[d.Station] = &a
 		}
 	}
 

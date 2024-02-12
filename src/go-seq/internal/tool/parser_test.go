@@ -34,7 +34,7 @@ func TestParser(t *testing.T) {
 
 func newTestCases() []testCase {
 	_, b, _, _ := runtime.Caller(0)
-	pattern := filepath.Join(b, "../../../../../data/testcases/*.txt")
+	pattern := filepath.Join(b, "../../../../data/testcases/*.txt")
 
 	testFiles, _ := filepath.Glob(pattern)
 
