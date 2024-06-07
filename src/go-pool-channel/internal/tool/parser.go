@@ -2,15 +2,39 @@ package tool
 
 import (
 	"bufio"
-	"lvciot/go-seq/internal/model"
+	"lvciot/go-pool-channel/internal/model"
 	"os"
+	"runtime"
 	"sort"
 	"strings"
+	"sync"
 )
 
-func Parser(sf string, df string, i *int) {
-	// todo: make map of reference
-	aggregates := make(map[string]*model.StationAggregate)
+const (
+	CHAN_DETECTION_SIZE = 10
+	CHAN_AGGREGATE_SIZE = 5
+	FINAL_PROCESSES     = 2
+)
+
+type AggregateMap map[string]*model.Aggregate
+
+func Parser(sf string, df string, c *int) {
+	nCpus := runtime.NumCPU()
+	rows := make(chan string, CHAN_DETECTION_SIZE)
+	aggregateMaps := make(chan AggregateMap, CHAN_AGGREGATE_SIZE)
+	wg := sync.WaitGroup{}
+
+	for i := 0; i < nCpus; i++ {
+		wg.Add(1)
+		go aggregator(rows, aggregateMaps, &wg)
+	}
+
+	aggregateMapSafe := NewAggregateMapSafe()
+	for i := 0; i < FINAL_PROCESSES; i++ {
+		go func() {
+			superAggregator(&aggregateMapSafe, aggregateMaps)
+		}()
+	}
 
 	srcFile, _ := os.Open(sf)
 	defer srcFile.Close()
@@ -21,31 +45,27 @@ func Parser(sf string, df string, i *int) {
 	dstWriter := bufio.NewWriter(dstFile)
 
 	for srcScanner.Scan() {
-		*i++
-		d := model.NewDetectionFromRow(srcScanner.Text())
-
-		a, exist := aggregates[d.Station]
-
-		if exist {
-			a.AddDetection(d)
-		} else {
-			a := model.NewStationAggregateFromDetection(d)
-			aggregates[d.Station] = &a
-		}
+		*c++
+		rows <- srcScanner.Text()
 	}
+	close(rows)
 
-	totalStations := len(aggregates)
+	wg.Wait()
+
+	aggregatesSafe := aggregateMapSafe.M
+
+	totalStations := len(aggregatesSafe)
 	stations := make([]string, totalStations)
 	aggregateRows := make([]string, totalStations)
 
 	j := 0
-	for station, _ := range aggregates {
+	for station, _ := range aggregatesSafe {
 		stations[j] = station
 		j++
 	}
 	sort.Strings(stations)
 	for j, station := range stations {
-		aggregate := aggregates[station]
+		aggregate := aggregatesSafe[station].A
 		aggregateRows[j] = aggregate.String()
 	}
 
@@ -55,4 +75,31 @@ func Parser(sf string, df string, i *int) {
 	_ = dstWriter.Flush()
 
 	return
+}
+
+func aggregator(rows <-chan string, aggregateMaps chan AggregateMap, wg *sync.WaitGroup) {
+	aggregateMap := make(AggregateMap)
+
+	for row := range rows {
+		detection := model.NewDetectionFromRow(row)
+		a, exist := aggregateMap[detection.Station]
+
+		if exist {
+			a.AddDetection(detection)
+		} else {
+			a := model.NewStationAggregateFromDetection(detection)
+			aggregateMap[detection.Station] = &a
+		}
+	}
+
+	aggregateMaps <- aggregateMap
+	wg.Done()
+}
+
+func superAggregator(aggregateMap *AggregateMapSafe, aggregateMaps <-chan AggregateMap) {
+	for am := range aggregateMaps {
+		for _, a := range am {
+			aggregateMap.AddAggregate(*a)
+		}
+	}
 }

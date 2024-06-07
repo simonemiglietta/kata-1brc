@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"io"
 	"log"
-	"lvciot/go-seq/internal/tool"
+	"lvciot/go-pool-channel/internal/tool"
 	"os"
 	"path/filepath"
 	"runtime"

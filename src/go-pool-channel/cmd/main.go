@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/schollz/progressbar/v3"
-	"lvciot/go-seq/internal/tool"
+	"lvciot/go-pool-channel/internal/tool"
 	"path/filepath"
 	"runtime"
 	"time"
