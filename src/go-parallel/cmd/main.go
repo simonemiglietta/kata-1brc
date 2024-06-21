@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/schollz/progressbar/v3"
 	"lvciot/go-seq/internal/model"
@@ -14,7 +15,7 @@ import (
 )
 
 const (
-	MaxRows = 1_000_000_000
+	MaxRows = 1_000_000
 	SrcFile = "../../../../data/measurements.txt"
 	DstFile = "../../measurements.out"
 )
@@ -26,12 +27,12 @@ func main() {
 	bar := progressbar.Default(MaxRows)
 	ticker := time.NewTicker(time.Second)
 
-	i := 0
+	t := 0
 	go func() {
 		for {
 			select {
 			case <-ticker.C:
-				_ = bar.Set(i)
+				_ = bar.Set(t)
 			}
 		}
 	}()
@@ -68,7 +69,7 @@ func main() {
 			if i == numCores-1 {
 				end = fileSize // Ensure the last partition goes to the end of the file
 			}
-			results[i] = tool.Parser(srcFile, start, end)
+			results[i] = tool.Parser(srcFile, start, end, &t)
 		}(i)
 	}
 
@@ -77,7 +78,7 @@ func main() {
 
 	for _, result := range results {
 		a := result
-		print(a)
+		fmt.Print(a)
 	}
 
 	totalStations := len(aggregates)
@@ -96,5 +97,5 @@ func main() {
 	}
 
 	_ = bar.Set(MaxRows)
-	println()
+	_, _ = fmt.Print(json.Marshal(aggregates))
 }

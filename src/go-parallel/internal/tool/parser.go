@@ -7,8 +7,8 @@ import (
 	"os"
 )
 
-func Parser(sf string, start int64, end int64) map[string]*model.StationAggregate {
-	// todo: make map of reference
+func Parser(sf string, start int64, end int64, t *int) map[string]*model.StationAggregate {
+
 	aggregates := make(map[string]*model.StationAggregate)
 
 	srcFile, _ := os.Open(sf)
@@ -22,20 +22,23 @@ func Parser(sf string, start int64, end int64) map[string]*model.StationAggregat
 
 	srcScanner := bufio.NewScanner(srcFile)
 	position := start
-	for position < end {
-		for srcScanner.Scan() {
-			text := srcScanner.Text()
-			d := model.NewDetectionFromRow(text)
+	for srcScanner.Scan() {
+		text := srcScanner.Text()
+		d := model.NewDetectionFromRow(text)
 
-			a, exist := aggregates[d.Station]
+		a, exist := aggregates[d.Station]
 
-			if exist {
-				a.AddDetection(d)
-			} else {
-				a := model.NewStationAggregateFromDetection(d)
-				aggregates[d.Station] = &a
-			}
-			position += int64(len([]byte(text)))
+		if exist {
+			a.AddDetection(d)
+		} else {
+			a := model.NewStationAggregateFromDetection(d)
+			aggregates[d.Station] = &a
+		}
+		// retrieve \n length
+		position += int64(len([]byte(text))) + 1
+		*t++
+		if position >= end {
+			break
 		}
 
 	}
