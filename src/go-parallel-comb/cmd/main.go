@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	MaxRows = 1_000_000
+	MaxRows = 1_000_000_000
 	SrcFile = "../../../../data/measurements.txt"
 	DstFile = "../../measurements.out"
 )
@@ -44,7 +44,7 @@ func main() {
 	}
 	defer file.Close()
 
-	numCores := 1
+	numCores := 10
 
 	fileInfo, err := file.Stat()
 	if err != nil {
@@ -96,6 +96,6 @@ func main() {
 		aggregateRows[j] = aggregate.String()
 	}
 
-	_ = bar.Set(MaxRows)
+	//_ = bar.Set(MaxRows)
 	_, _ = fmt.Print(json.Marshal(aggregates))
 }
