@@ -1,7 +1,7 @@
 package main
 
 import (
-	"encoding/json"
+	"bufio"
 	"fmt"
 	"github.com/schollz/progressbar/v3"
 	"lvciot/go-seq/internal/model"
@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 )
@@ -23,6 +24,7 @@ const (
 func main() {
 	_, b, _, _ := runtime.Caller(0)
 	srcFile := filepath.Join(b, SrcFile)
+	dstFile := filepath.Join(b, DstFile)
 	numCores := 16
 
 	bar := progressbar.Default(MaxRows)
@@ -34,6 +36,10 @@ func main() {
 		return
 	}
 	defer file.Close()
+
+	df, _ := os.Create(dstFile)
+	defer df.Close()
+	dstWriter := bufio.NewWriter(df)
 
 	fileInfo, err := file.Stat()
 	if err != nil {
@@ -110,6 +116,8 @@ func main() {
 		aggregateRows[j] = aggregate.String()
 	}
 
-	//_ = bar.Set(MaxRows)
-	_, _ = fmt.Print(json.Marshal(aggregateRows))
+	_, _ = dstWriter.WriteString("{")
+	_, _ = dstWriter.WriteString(strings.Join(aggregateRows, ", "))
+	_, _ = dstWriter.WriteString("}\n")
+	_ = dstWriter.Flush()
 }
