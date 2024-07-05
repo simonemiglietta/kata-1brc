@@ -23,13 +23,15 @@ func NewStationAggregateFromDetection(d Detection) (sa StationAggregate) {
 	return
 }
 
-func (sa *StationAggregate) AddDetection(d Detection) {
-	t := d.Temperature
-
-	sa.ItemCount++
-	sa.Temperature.Sum += t
-	sa.Temperature.Minimum = min(sa.Temperature.Minimum, t)
-	sa.Temperature.Maximum = max(sa.Temperature.Maximum, t)
+// use composite pattern to add measurement
+func (sa *StationAggregate) AddMeasurement(m MeasurementInterface) {
+	if m.GetStation() != sa.Station {
+		return
+	}
+	sa.ItemCount += m.GetItemCount()
+	sa.Temperature.Sum += m.GetTemperatureSum()
+	sa.Temperature.Minimum = min(sa.Temperature.Minimum, m.GetTemperatureMin())
+	sa.Temperature.Maximum = max(sa.Temperature.Maximum, m.GetTemperatureMax())
 }
 
 func (sa *StationAggregate) TemperatureMean() float32 {
@@ -43,4 +45,24 @@ func (sa *StationAggregate) String() string {
 		"%s=%.1f/%.1f/%.1f",
 		sa.Station, sa.Temperature.Minimum, roundedMean, sa.Temperature.Maximum,
 	)
+}
+
+func (sa *StationAggregate) GetStation() string {
+	return sa.Station
+}
+
+func (sa *StationAggregate) GetItemCount() uint64 {
+	return sa.ItemCount
+}
+
+func (sa *StationAggregate) GetTemperatureSum() float32 {
+	return sa.Temperature.Sum
+}
+
+func (sa *StationAggregate) GetTemperatureMin() float32 {
+	return sa.Temperature.Minimum
+}
+
+func (sa *StationAggregate) GetTemperatureMax() float32 {
+	return sa.Temperature.Maximum
 }

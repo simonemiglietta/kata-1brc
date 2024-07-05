@@ -29,3 +29,23 @@ func NewDetectionFromRow(row string) (d Detection) {
 func (d Detection) String() string {
 	return fmt.Sprintf("%s;%.1f", d.Station, d.Temperature)
 }
+
+func (d Detection) GetStation() string {
+	return d.Station
+}
+
+func (d Detection) GetTemperatureSum() float32 {
+	return d.Temperature
+}
+
+func (d Detection) GetTemperatureMin() float32 {
+	return d.Temperature
+}
+
+func (d Detection) GetTemperatureMax() float32 {
+	return d.Temperature
+}
+
+func (d Detection) GetItemCount() uint64 {
+	return 1
+}

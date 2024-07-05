@@ -7,14 +7,24 @@ import (
 	"os"
 )
 
-func Parser(sf string, start int64, end int64, t *int) map[string]*model.StationAggregate {
+const (
+	RowSeparator = "\n"
+)
+
+func Parser(processId int, sf string, start int64, end int64, advancement model.AdvancementMutex) map[string]*model.StationAggregate {
 
 	aggregates := make(map[string]*model.StationAggregate)
 
 	srcFile, _ := os.Open(sf)
 	defer srcFile.Close()
 
-	_, err := srcFile.Seek(start, 0)
+	start, err := findLineStartPosition(srcFile, start)
+	if err != nil {
+		fmt.Println("Error finding line start position:", err)
+		return nil
+	}
+
+	_, err = srcFile.Seek(start, 0)
 	if err != nil {
 		fmt.Println("Error seeking file:", err)
 		return nil
@@ -29,18 +39,47 @@ func Parser(sf string, start int64, end int64, t *int) map[string]*model.Station
 		a, exist := aggregates[d.Station]
 
 		if exist {
-			a.AddDetection(d)
+			a.AddMeasurement(d)
 		} else {
 			a := model.NewStationAggregateFromDetection(d)
 			aggregates[d.Station] = &a
 		}
-		// retrieve \n length
-		position += int64(len([]byte(text))) + 1
-		*t++
+
+		updateAdvancement(processId, advancement)
+
+		position += int64(len([]byte(text)) + len(RowSeparator))
 		if position >= end {
 			break
 		}
-
 	}
 	return aggregates
+}
+
+func updateAdvancement(processId int, advancement model.AdvancementMutex) {
+	advancement.ShardLocks[processId].Lock()
+	advancement.Shards[processId]++
+	advancement.ShardLocks[processId].Unlock()
+}
+
+func findLineStartPosition(file *os.File, start int64) (int64, error) {
+	buffer := make([]byte, 1)
+	for {
+		if start == 0 {
+			break
+		}
+		start--
+		_, err := file.Seek(start, 0)
+		if err != nil {
+			return 0, err
+		}
+		_, err = file.Read(buffer)
+		if err != nil {
+			return 0, err
+		}
+		if buffer[0] == '\n' {
+			start++
+			break
+		}
+	}
+	return start, nil
 }

@@ -23,19 +23,10 @@ const (
 func main() {
 	_, b, _, _ := runtime.Caller(0)
 	srcFile := filepath.Join(b, SrcFile)
+	numCores := 16
 
 	bar := progressbar.Default(MaxRows)
 	ticker := time.NewTicker(time.Second)
-
-	t := 0
-	go func() {
-		for {
-			select {
-			case <-ticker.C:
-				_ = bar.Set(t)
-			}
-		}
-	}()
 
 	file, err := os.Open(srcFile)
 	if err != nil {
@@ -43,8 +34,6 @@ func main() {
 		return
 	}
 	defer file.Close()
-
-	numCores := 10
 
 	fileInfo, err := file.Stat()
 	if err != nil {
@@ -55,6 +44,25 @@ func main() {
 
 	// Calculate the size of each partition
 	partitionSize := fileSize / int64(numCores)
+
+	advancement := model.AdvancementMutex{
+		ShardLocks: make([]sync.Mutex, numCores),
+		Shards:     make([]int, numCores),
+	}
+
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+
+				totalProgress := 0
+				for i := 0; i < numCores; i++ {
+					totalProgress += advancement.Shards[i]
+				}
+				_ = bar.Set(totalProgress)
+			}
+		}
+	}()
 
 	var wg sync.WaitGroup
 	wg.Add(numCores)
@@ -69,7 +77,7 @@ func main() {
 			if i == numCores-1 {
 				end = fileSize // Ensure the last partition goes to the end of the file
 			}
-			results[i] = tool.Parser(srcFile, start, end, &t)
+			results[i] = tool.Parser(i, srcFile, start, end, advancement)
 		}(i)
 	}
 
@@ -77,8 +85,14 @@ func main() {
 	aggregates := make(map[string]*model.StationAggregate)
 
 	for _, result := range results {
-		a := result
-		fmt.Print(a)
+		for _, station := range result {
+			a, exist := aggregates[station.Station]
+			if exist {
+				a.AddMeasurement(station)
+			} else {
+				aggregates[station.Station] = station
+			}
+		}
 	}
 
 	totalStations := len(aggregates)
@@ -97,5 +111,5 @@ func main() {
 	}
 
 	//_ = bar.Set(MaxRows)
-	_, _ = fmt.Print(json.Marshal(aggregates))
+	_, _ = fmt.Print(json.Marshal(aggregateRows))
 }
