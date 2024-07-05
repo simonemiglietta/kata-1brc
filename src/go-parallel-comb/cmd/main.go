@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"github.com/schollz/progressbar/v3"
 	"lvciot/go-seq/internal/model"
@@ -16,9 +17,10 @@ import (
 )
 
 const (
-	MaxRows = 1_000_000_000
-	SrcFile = "../../../../data/measurements.txt"
-	DstFile = "../../measurements.out"
+	MaxRows     = 1_000_000_000
+	SrcFile     = "../../../../data/measurements.txt"
+	DstFile     = "../../measurements.out"
+	DstFileJson = "../../measurements.json"
 )
 
 func main() {
@@ -40,6 +42,11 @@ func main() {
 	df, _ := os.Create(dstFile)
 	defer df.Close()
 	dstWriter := bufio.NewWriter(df)
+
+	dfj, _ := os.Create(DstFileJson)
+	defer df.Close()
+
+	dstWriterJ := bufio.NewWriter(dfj)
 
 	fileInfo, err := file.Stat()
 	if err != nil {
@@ -116,8 +123,10 @@ func main() {
 		aggregateRows[j] = aggregate.String()
 	}
 
-	_, _ = dstWriter.WriteString("{")
-	_, _ = dstWriter.WriteString(strings.Join(aggregateRows, ", "))
-	_, _ = dstWriter.WriteString("}\n")
+	_, _ = dstWriter.WriteString(strings.Join(aggregateRows, "\n"))
 	_ = dstWriter.Flush()
+
+	jsonRows, err := json.Marshal(aggregateRows)
+	_, _ = dstWriterJ.Write(jsonRows)
+	_ = dstWriterJ.Flush()
 }

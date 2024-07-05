@@ -6,8 +6,8 @@ import (
 )
 
 type StationAggregate struct {
-	Station     string
-	ItemCount   uint64
+	Station     string `json:"station"`
+	ItemCount   uint64 `json:"item_count"`
 	Temperature struct {
 		Minimum, Maximum, Sum float32
 	}
