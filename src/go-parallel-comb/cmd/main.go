@@ -24,16 +24,18 @@ const (
 )
 
 func main() {
-
 	numCores := 16
 	_, b, _, _ := runtime.Caller(0)
 	srcFile := filepath.Join(b, SrcFile)
 	dstFile := filepath.Join(b, DstFile)
+	dstFileJson := filepath.Join(b, DstFileJson)
 
-	StationStats(srcFile, dstFile, numCores)
+	sortedStations := StationStats(srcFile, numCores)
+
+	writeOnFile(sortedStations, dstFile, dstFileJson)
 }
 
-func StationStats(srcFile string, dstFile string, numCores int) []string {
+func StationStats(srcFile string, numCores int) []string {
 	file, err := os.Open(srcFile)
 	if err != nil {
 		fmt.Println("Error opening file:", err)
@@ -41,23 +43,14 @@ func StationStats(srcFile string, dstFile string, numCores int) []string {
 	}
 	defer file.Close()
 
-	df, _ := os.Create(dstFile)
-	defer df.Close()
-	dstWriter := bufio.NewWriter(df)
-
-	dfj, _ := os.Create(DstFileJson)
-	defer df.Close()
-
-	dstWriterJ := bufio.NewWriter(dfj)
-
 	fileInfo, err := file.Stat()
 	if err != nil {
 		fmt.Println("Error getting file info:", err)
 		return nil
 	}
-	fileSize := fileInfo.Size()
 
 	// Calculate the size of each partition
+	fileSize := fileInfo.Size()
 	partitionSize := fileSize / int64(numCores)
 
 	advancement := model.AdvancementMutex{
@@ -69,9 +62,7 @@ func StationStats(srcFile string, dstFile string, numCores int) []string {
 
 	var wg sync.WaitGroup
 	wg.Add(numCores)
-
-	results := make([]map[string]*model.StationAggregate, numCores)
-
+	stations := make([]map[string]*model.StationAggregate, numCores)
 	for i := 0; i < numCores; i++ {
 		go func(i int) {
 			defer wg.Done()
@@ -80,18 +71,38 @@ func StationStats(srcFile string, dstFile string, numCores int) []string {
 			if i == numCores-1 {
 				end = fileSize // Ensure the last partition goes to the end of the file
 			}
-			results[i] = tool.Parser(i, srcFile, start, end, advancement)
+			stations[i] = tool.Parser(i, srcFile, start, end, advancement)
 		}(i)
 	}
-
 	wg.Wait()
-	aggregates := AggregateResults(results)
 
+	reconstructedStations := reconstructSolution(stations)
+	sortedStations := sortStations(reconstructedStations)
+
+	return sortedStations
+}
+
+func writeOnFile(sortedStations []string, rawFileDest string, jsonDestFile string) {
+	df, _ := os.Create(rawFileDest)
+	defer df.Close()
+	dstWriter := bufio.NewWriter(df)
+	_, _ = dstWriter.WriteString(strings.Join(sortedStations, "\n"))
+	_ = dstWriter.Flush()
+
+	dfj, _ := os.Create(jsonDestFile)
+	defer df.Close()
+	dstWriterJ := bufio.NewWriter(dfj)
+	jsonRows, _ := json.Marshal(sortedStations)
+	_, _ = dstWriterJ.Write(jsonRows)
+	_ = dstWriterJ.Flush()
+}
+
+func sortStations(aggregates map[string]*model.StationAggregate) []string {
+	j := 0
 	totalStations := len(aggregates)
 	stations := make([]string, totalStations)
-	aggregateRows := make([]string, totalStations)
+	sortedRows := make([]string, totalStations)
 
-	j := 0
 	for station, _ := range aggregates {
 		stations[j] = station
 		j++
@@ -99,17 +110,10 @@ func StationStats(srcFile string, dstFile string, numCores int) []string {
 	sort.Strings(stations)
 	for j, station := range stations {
 		aggregate := aggregates[station]
-		aggregateRows[j] = aggregate.String()
+		sortedRows[j] = aggregate.String()
 	}
+	return sortedRows
 
-	_, _ = dstWriter.WriteString(strings.Join(aggregateRows, "\n"))
-	_ = dstWriter.Flush()
-
-	jsonRows, err := json.Marshal(aggregateRows)
-	_, _ = dstWriterJ.Write(jsonRows)
-	_ = dstWriterJ.Flush()
-
-	return aggregateRows
 }
 
 func progressBar(numCores int, advancement model.AdvancementMutex) {
@@ -130,7 +134,7 @@ func progressBar(numCores int, advancement model.AdvancementMutex) {
 	}()
 }
 
-func AggregateResults(results []map[string]*model.StationAggregate) map[string]*model.StationAggregate {
+func reconstructSolution(results []map[string]*model.StationAggregate) map[string]*model.StationAggregate {
 	aggregates := make(map[string]*model.StationAggregate)
 
 	for _, result := range results {

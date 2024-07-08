@@ -30,13 +30,12 @@ func TestCores(t *testing.T) {
 
 	_, b, _, _ := runtime.Caller(0)
 	srcFile := filepath.Join(b, SrcFile)
-	dstFile := filepath.Join(b, DstFile)
 
 	for i, test := range tests {
 
 		start := time.Now()
 
-		tests[i].countStations = int64(len(StationStats(srcFile, dstFile, test.numCores)))
+		tests[i].countStations = int64(len(StationStats(srcFile, test.numCores)))
 
 		duration := time.Since(start)
 		tests[i].duration = duration.Milliseconds()
