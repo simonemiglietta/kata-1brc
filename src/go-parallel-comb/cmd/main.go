@@ -17,25 +17,27 @@ import (
 )
 
 const (
-	MaxRows     = 1_000_000_000
+	MaxRows     = 1_000_000
 	SrcFile     = "../../../../data/measurements.txt"
 	DstFile     = "../../measurements.out"
 	DstFileJson = "../../measurements.json"
 )
 
 func main() {
+
+	numCores := 16
 	_, b, _, _ := runtime.Caller(0)
 	srcFile := filepath.Join(b, SrcFile)
 	dstFile := filepath.Join(b, DstFile)
-	numCores := 16
 
-	bar := progressbar.Default(MaxRows)
-	ticker := time.NewTicker(time.Second)
+	StationStats(srcFile, dstFile, numCores)
+}
 
+func StationStats(srcFile string, dstFile string, numCores int) []string {
 	file, err := os.Open(srcFile)
 	if err != nil {
 		fmt.Println("Error opening file:", err)
-		return
+		return nil
 	}
 	defer file.Close()
 
@@ -51,7 +53,7 @@ func main() {
 	fileInfo, err := file.Stat()
 	if err != nil {
 		fmt.Println("Error getting file info:", err)
-		return
+		return nil
 	}
 	fileSize := fileInfo.Size()
 
@@ -63,19 +65,7 @@ func main() {
 		Shards:     make([]int, numCores),
 	}
 
-	go func() {
-		for {
-			select {
-			case <-ticker.C:
-
-				totalProgress := 0
-				for i := 0; i < numCores; i++ {
-					totalProgress += advancement.Shards[i]
-				}
-				_ = bar.Set(totalProgress)
-			}
-		}
-	}()
+	progressBar(numCores, advancement)
 
 	var wg sync.WaitGroup
 	wg.Add(numCores)
@@ -95,18 +85,7 @@ func main() {
 	}
 
 	wg.Wait()
-	aggregates := make(map[string]*model.StationAggregate)
-
-	for _, result := range results {
-		for _, station := range result {
-			a, exist := aggregates[station.Station]
-			if exist {
-				a.AddMeasurement(station)
-			} else {
-				aggregates[station.Station] = station
-			}
-		}
-	}
+	aggregates := AggregateResults(results)
 
 	totalStations := len(aggregates)
 	stations := make([]string, totalStations)
@@ -129,4 +108,40 @@ func main() {
 	jsonRows, err := json.Marshal(aggregateRows)
 	_, _ = dstWriterJ.Write(jsonRows)
 	_ = dstWriterJ.Flush()
+
+	return aggregateRows
+}
+
+func progressBar(numCores int, advancement model.AdvancementMutex) {
+	bar := progressbar.Default(MaxRows)
+	ticker := time.NewTicker(time.Second)
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+
+				totalProgress := 0
+				for i := 0; i < numCores; i++ {
+					totalProgress += advancement.Shards[i]
+				}
+				_ = bar.Set(totalProgress)
+			}
+		}
+	}()
+}
+
+func AggregateResults(results []map[string]*model.StationAggregate) map[string]*model.StationAggregate {
+	aggregates := make(map[string]*model.StationAggregate)
+
+	for _, result := range results {
+		for _, station := range result {
+			a, exist := aggregates[station.Station]
+			if exist {
+				a.AddMeasurement(station)
+			} else {
+				aggregates[station.Station] = station
+			}
+		}
+	}
+	return aggregates
 }
