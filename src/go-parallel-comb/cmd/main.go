@@ -134,16 +134,16 @@ func progressBar(numCores int, advancement model.AdvancementMutex) {
 	}()
 }
 
-func reconstructSolution(results []map[string]*model.StationAggregate) map[string]*model.StationAggregate {
+func reconstructSolution(processesStations []map[string]*model.StationAggregate) map[string]*model.StationAggregate {
 	aggregates := make(map[string]*model.StationAggregate)
 
-	for _, result := range results {
-		for _, station := range result {
-			a, exist := aggregates[station.Station]
+	for _, stationsAggregates := range processesStations {
+		for _, sa := range stationsAggregates {
+			a, exist := aggregates[sa.Station]
 			if exist {
-				a.AddMeasurement(station)
+				a.AddMeasurement(sa)
 			} else {
-				aggregates[station.Station] = station
+				aggregates[sa.Station] = sa
 			}
 		}
 	}
