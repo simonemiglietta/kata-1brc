@@ -22,17 +22,20 @@ func main() {
 	bar := progressbar.Default(MaxRows)
 	ticker := time.NewTicker(time.Second)
 
-	i := 0
+	progress := 0
+	increment := make(chan int, 5)
 	go func() {
 		for {
 			select {
 			case <-ticker.C:
-				_ = bar.Set(i)
+				_ = bar.Set(progress)
+			case i := <-increment:
+				progress += i
 			}
 		}
 	}()
 
-	tool.Parser(srcFile, dstFile, &i)
+	tool.Parser(srcFile, dstFile, increment)
 
 	_ = bar.Set(MaxRows)
 	println()

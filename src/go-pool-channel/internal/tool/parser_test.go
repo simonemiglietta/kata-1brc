@@ -20,11 +20,11 @@ type testCase struct {
 
 func TestParser(t *testing.T) {
 	actual := "measurements.out"
-	i := 0
+	progress := make(chan int, 1_000_000_000)
 	tcs := newTestCases()
 
 	for _, tc := range tcs {
-		tool.Parser(tc.source, actual, &i)
+		tool.Parser(tc.source, actual, progress)
 
 		if !deepCompare(tc.expected, actual) {
 			t.Fatalf("File %s is not as expected", tc.name)
