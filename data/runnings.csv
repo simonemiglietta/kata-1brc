@@ -1,5 +1,6 @@
-Time,Script,Language,Time,Memory
-2023-02-07,php,PHP,11:44.29,28544
-2023-02-11,go-seq,Go,3.24.50,11104,results in map of structs
-2023-02-12,go-seq,Go,4:29.50,8744,during videocall
-2023-02-12,go-seq,Go,3:04.01,8872,results in map of pointers
+Time,Script,Language,Time,Memory,Note
+2024-02-07,php,PHP,11:44.29,28544,
+2024-02-11,go-seq,Go,3.24.50,11104,results in map of structs
+2024-02-12,go-seq,Go,4:29.50,8744,during videocall
+2024-02-12,go-seq,Go,3:04.01,8872,results in map of pointers
+2024-08-30,go-parallel-comb,Go,2:46.00,43576,
