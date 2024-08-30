@@ -27,14 +27,14 @@ func TestParser(t *testing.T) {
 		tool.Parser(tc.source, actual, &i)
 
 		if !deepCompare(tc.expected, actual) {
-			t.Fatalf("File %s is not as expected", tc.name)
+			t.Errorf("File %s is not as expected", tc.name)
 		}
 	}
 }
 
 func newTestCases() []testCase {
 	_, b, _, _ := runtime.Caller(0)
-	pattern := filepath.Join(b, "../../../../data/testcases/*.txt")
+	pattern := filepath.Join(b, "../../../../../data/testcases/*.txt")
 
 	testFiles, _ := filepath.Glob(pattern)
 
