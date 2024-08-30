@@ -56,9 +56,7 @@ func Parser(processId int, sf string, start int64, end int64, advancement model.
 }
 
 func updateAdvancement(processId int, advancement model.AdvancementMutex) {
-	advancement.ShardLocks[processId].Lock()
 	advancement.Shards[processId]++
-	advancement.ShardLocks[processId].Unlock()
 }
 
 func findLineStartPosition(file *os.File, start int64) (int64, error) {

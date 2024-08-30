@@ -24,7 +24,7 @@ const (
 )
 
 func main() {
-	numCores := 16
+	numCores := runtime.NumCPU()
 	_, b, _, _ := runtime.Caller(0)
 	srcFile := filepath.Join(b, SrcFile)
 	dstFile := filepath.Join(b, DstFile)

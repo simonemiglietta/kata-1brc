@@ -56,3 +56,29 @@ func TestCores(t *testing.T) {
 		t.Logf("Running test on %s cores in total time: %d ms\n", test.name, test.duration)
 	}
 }
+
+func TestProfile(t *testing.T) {
+	maxCores := runtime.NumCPU()
+	stringCore := strconv.Itoa(maxCores)
+
+	test := testCase{
+		name:          stringCore,
+		numCores:      maxCores,
+		countStations: 0,
+	}
+
+	_, b, _, _ := runtime.Caller(0)
+	srcFile := filepath.Join(b, SrcFile)
+
+	start := time.Now()
+
+	test.countStations = int64(len(StationStats(srcFile, test.numCores)))
+
+	duration := time.Since(start)
+	test.duration = duration.Milliseconds()
+
+	// Restore the original command-line arguments
+	t.Logf("\n")
+	t.Logf("Running test on %s cores in total time: %d ms\n", test.name, test.duration)
+
+}
