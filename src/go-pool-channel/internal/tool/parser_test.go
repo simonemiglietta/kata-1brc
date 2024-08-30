@@ -18,23 +18,39 @@ type testCase struct {
 	expected string
 }
 
+func TestParserJustMillion(t *testing.T) {
+	_, b, _, _ := runtime.Caller(0)
+	src := filepath.Join(b, "../../../../../data/testcases/measurements-1m.txt")
+	dst := filepath.Join(b, "../../../../../data/testcases/measurements-1m.out")
+	actual := "measurements.out"
+
+	progress := make(chan int, 1_000_000_000)
+	tool.Parser(src, actual, progress)
+	if !deepCompare(dst, actual) {
+		t.Errorf("File 'rounding' is not as expected")
+		//t.Fatalf("File %s is not as expected", tc.name)
+	}
+}
+
 func TestParser(t *testing.T) {
 	actual := "measurements.out"
-	progress := make(chan int, 1_000_000_000)
 	tcs := newTestCases()
 
 	for _, tc := range tcs {
+		progress := make(chan int, 1_000_000_000)
+
 		tool.Parser(tc.source, actual, progress)
 
 		if !deepCompare(tc.expected, actual) {
-			t.Fatalf("File %s is not as expected", tc.name)
+			t.Errorf("File %s is not as expected", tc.name)
+			//t.Fatalf("File %s is not as expected", tc.name)
 		}
 	}
 }
 
 func newTestCases() []testCase {
 	_, b, _, _ := runtime.Caller(0)
-	pattern := filepath.Join(b, "../../../../data/testcases/*.txt")
+	pattern := filepath.Join(b, "../../../../../data/testcases/*.txt")
 
 	testFiles, _ := filepath.Glob(pattern)
 
