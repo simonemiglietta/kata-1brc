@@ -45,7 +45,7 @@ The following table lists the best performances reached by each language e/o scr
 |------------------|----------|--------------------------------------------|---------:|-------:|------------------------------------|
 | php              | PHP      | Simple with Yield                          | 11:44.29 |  28544 | Data taken on the second run (JIT) |
 | go-seq           | Go       | Full sequential                            |  3:04.01 |   8872 |                                    |
-| go-parallel-comb | Go       | Data comb separation on pool of coroutines |  2:46.00 |  43576 |                                    |
+| go-parallel-comb | Go       | Data comb separation on pool of coroutines |  1:56.84 |  39612 |                                    |
 
 Each script is evaluated by the shell command `/usr/bin/time -f "time: %E - memory: %M" <command>`. Pay attention: you
 have to use the `time` linux program, not the shell command!

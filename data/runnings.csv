@@ -4,3 +4,4 @@ Time,Script,Language,Time,Memory,Note
 2024-02-12,go-seq,Go,4:29.50,8744,during videocall
 2024-02-12,go-seq,Go,3:04.01,8872,results in map of pointers
 2024-08-30,go-parallel-comb,Go,2:46.00,43576,
+2024-09-01,go-parallel-comb,Go,1:56.84,39612,progress bar update without lock

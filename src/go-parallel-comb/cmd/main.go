@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	MaxRows     = 1_000_000
+	MaxRows     = 1_000_000_000
 	SrcFile     = "../../../../data/measurements.txt"
 	DstFile     = "../../measurements.out"
 	DstFileJson = "../../measurements.json"
