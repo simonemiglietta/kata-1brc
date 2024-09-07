@@ -8,36 +8,33 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 )
 
 const (
-	ChanDetectionSize = 1_000
-	ChanPoolSize      = 5
+	ChanDetectionSize = 10
+	ChanAggregateSize = 5
+	FinalProcesses    = 2
 )
 
-func Parser(sf string, df string, increment chan int) {
+func Parser(sf string, df string, c *atomic.Uint32) {
 	nCpus := runtime.NumCPU()
 	rows := make(chan string, ChanDetectionSize)
-	aggregateMapPools := make(chan AggregateMap, ChanPoolSize)
-	aggregateResultsMap := NewAggregateMap()
-	var poolWg sync.WaitGroup
+	aggregateMaps := make(chan StationMap, ChanAggregateSize)
+	wg := sync.WaitGroup{}
 
-	// pool of workers
-	// dividi et impera through channel
 	for i := 0; i < nCpus; i++ {
-		go aggregator(rows, aggregateMapPools, &poolWg)
+		wg.Add(1)
+		go aggregator(rows, aggregateMaps, &wg)
 	}
 
-	// recompose results
-	go func() {
-		for aggregateMap := range aggregateMapPools {
-			for _, a := range aggregateMap {
-				aggregateResultsMap.AddAggregate(a)
-			}
-		}
-	}()
+	aggregateMapSafe := NewStationsMapSafe()
+	for i := 0; i < FinalProcesses; i++ {
+		go func() {
+			superAggregator(&aggregateMapSafe, aggregateMaps)
+		}()
+	}
 
-	// file parsing
 	srcFile, _ := os.Open(sf)
 	defer srcFile.Close()
 	srcScanner := bufio.NewScanner(srcFile)
@@ -47,26 +44,27 @@ func Parser(sf string, df string, increment chan int) {
 	dstWriter := bufio.NewWriter(dstFile)
 
 	for srcScanner.Scan() {
-		increment <- 1
+		c.Add(1)
 		rows <- srcScanner.Text()
 	}
 	close(rows)
-	poolWg.Wait()
-	close(aggregateMapPools)
 
-	// sort and print
-	totalStations := len(aggregateResultsMap)
+	wg.Wait()
+
+	aggregatesSafe := aggregateMapSafe.M
+
+	totalStations := len(aggregatesSafe)
 	stations := make([]string, totalStations)
 	aggregateRows := make([]string, totalStations)
 
 	j := 0
-	for station, _ := range aggregateResultsMap {
+	for station, _ := range aggregatesSafe {
 		stations[j] = station
 		j++
 	}
 	sort.Strings(stations)
 	for j, station := range stations {
-		aggregate := aggregateResultsMap[station]
+		aggregate := aggregatesSafe[station].A
 		aggregateRows[j] = aggregate.String()
 	}
 
@@ -78,22 +76,29 @@ func Parser(sf string, df string, increment chan int) {
 	return
 }
 
-func aggregator(rows <-chan string, aggregateMaps chan AggregateMap, wg *sync.WaitGroup) {
-	wg.Add(1)
-	aggregateMap := NewAggregateMap()
+func aggregator(rows <-chan string, aggregateMaps chan StationMap, wg *sync.WaitGroup) {
+	aggregateMap := make(StationMap)
 
 	for row := range rows {
 		detection := model.NewDetectionFromRow(row)
-		a, exist := aggregateMap[detection.Station]
+		a, exist := aggregateMap[detection.StationName]
 
 		if exist {
 			a.AddDetection(detection)
 		} else {
 			a := model.NewStationAggregateFromDetection(detection)
-			aggregateMap[detection.Station] = &a
+			aggregateMap[detection.StationName] = &a
 		}
 	}
 
 	aggregateMaps <- aggregateMap
 	wg.Done()
+}
+
+func superAggregator(aggregateMap *StationsMapSafe, aggregateMaps <-chan StationMap) {
+	for am := range aggregateMaps {
+		for _, a := range am {
+			aggregateMap.AddAggregate(*a)
+		}
+	}
 }

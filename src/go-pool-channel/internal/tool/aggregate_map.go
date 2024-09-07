@@ -4,18 +4,18 @@ import (
 	"lvciot/go-pool-channel/internal/model"
 )
 
-type AggregateMap map[string]*model.Aggregate
+type StationMap map[string]*model.Station
 
-func NewAggregateMap() AggregateMap {
-	return make(AggregateMap)
+func NewAggregateMap() StationMap {
+	return make(StationMap)
 }
 
-func (am AggregateMap) AddAggregate(a *model.Aggregate) {
-	as, exist := am[a.Station]
+func (sm StationMap) AddAggregate(s *model.Station) {
+	as, exist := sm[s.Name]
 
 	if exist {
-		as.AddAggregate(*a)
+		as.AddStation(*s)
 	} else {
-		am[a.Station] = a
+		sm[s.Name] = s
 	}
 }

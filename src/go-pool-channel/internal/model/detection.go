@@ -7,14 +7,14 @@ import (
 )
 
 type Detection struct {
-	Station     string
+	StationName string
 	Temperature float32
 }
 
 func NewDetectionFromRow(row string) (d Detection) {
 	split := strings.Split(row, ";")
 
-	d.Station = split[0]
+	d.StationName = split[0]
 	t, _ := strconv.ParseFloat(split[1], 32)
 	d.Temperature = float32(t)
 
@@ -22,5 +22,5 @@ func NewDetectionFromRow(row string) (d Detection) {
 }
 
 func (d Detection) String() string {
-	return fmt.Sprintf("%s;%.1f", d.Station, d.Temperature)
+	return fmt.Sprintf("%s;%.1f", d.StationName, d.Temperature)
 }

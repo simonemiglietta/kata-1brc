@@ -5,6 +5,7 @@ import (
 	"lvciot/go-pool-channel/internal/tool"
 	"path/filepath"
 	"runtime"
+	"sync/atomic"
 	"time"
 )
 
@@ -22,21 +23,18 @@ func main() {
 	bar := progressbar.Default(MaxRows)
 	ticker := time.NewTicker(time.Second)
 
-	progress := 0
-	increment := make(chan int, 5)
+	var counter atomic.Uint32
 	go func() {
 		for {
 			select {
 			case <-ticker.C:
-				_ = bar.Set(progress)
-			case i := <-increment:
-				progress += i
+				_ = bar.Set(int(counter.Load()))
 			}
 		}
 	}()
 
-	tool.Parser(srcFile, dstFile, increment)
+	tool.Parser(srcFile, dstFile, &counter)
 
-	_ = bar.Set(MaxRows)
+	//_ = bar.Set(MaxRows)
 	println()
 }

@@ -1,14 +1,9 @@
 package tool_test
 
 import (
-	"bytes"
-	"io"
-	"log"
 	"lvciot/go-pool-channel/internal/tool"
-	"os"
-	"path/filepath"
-	"runtime"
-	"strings"
+	"lvciot/shared/test"
+	"sync/atomic"
 	"testing"
 )
 
@@ -18,91 +13,20 @@ type testCase struct {
 	expected string
 }
 
-func TestParserJustMillion(t *testing.T) {
-	_, b, _, _ := runtime.Caller(0)
-	src := filepath.Join(b, "../../../../../data/testcases/measurements-1m.txt")
-	dst := filepath.Join(b, "../../../../../data/testcases/measurements-1m.out")
-	actual := "measurements.out"
-
-	progress := make(chan int, 1_000_000_000)
-	tool.Parser(src, actual, progress)
-	if !deepCompare(dst, actual) {
-		t.Errorf("File 'rounding' is not as expected")
-		//t.Fatalf("File %s is not as expected", tc.name)
-	}
-}
-
 func TestParser(t *testing.T) {
-	actual := "measurements.out"
-	tcs := newTestCases()
+	actualFile := "measurements.out"
+	var c atomic.Uint32
+	tcs := test.GetCases()
+
+	if len(tcs) == 0 {
+		t.Fatalf("no test cases found")
+	}
 
 	for _, tc := range tcs {
-		progress := make(chan int, 1_000_000_000)
+		tool.Parser(tc.SourceFile, actualFile, &c)
 
-		tool.Parser(tc.source, actual, progress)
-
-		if !deepCompare(tc.expected, actual) {
-			t.Errorf("File %s is not as expected", tc.name)
-			//t.Fatalf("File %s is not as expected", tc.name)
-		}
-	}
-}
-
-func newTestCases() []testCase {
-	_, b, _, _ := runtime.Caller(0)
-	pattern := filepath.Join(b, "../../../../../data/testcases/*.txt")
-
-	testFiles, _ := filepath.Glob(pattern)
-
-	tc := make([]testCase, len(testFiles))
-
-	for i, tf := range testFiles {
-		tc[i] = testCase{
-			name:     filepath.Base(tf),
-			source:   tf,
-			expected: strings.Replace(tf, ".txt", ".out", 1),
-		}
-	}
-
-	return tc
-}
-
-func deepCompare(file1, file2 string) bool {
-	const chunkSize = 64000
-
-	// Check file size ...
-
-	f1, err := os.Open(file1)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f1.Close()
-
-	f2, err := os.Open(file2)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f2.Close()
-
-	for {
-		b1 := make([]byte, chunkSize)
-		_, err1 := f1.Read(b1)
-
-		b2 := make([]byte, chunkSize)
-		_, err2 := f2.Read(b2)
-
-		if err1 != nil || err2 != nil {
-			if err1 == io.EOF && err2 == io.EOF {
-				return true
-			} else if err1 == io.EOF || err2 == io.EOF {
-				return false
-			} else {
-				log.Fatal(err1, err2)
-			}
-		}
-
-		if !bytes.Equal(b1, b2) {
-			return false
+		if !test.FileDeepCompare(tc.ExpectedFile, actualFile) {
+			t.Errorf("file %s is not as expected", tc.Name)
 		}
 	}
 }
