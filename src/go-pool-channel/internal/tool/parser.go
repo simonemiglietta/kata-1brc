@@ -28,43 +28,37 @@ func Parser(sf string, df string, c *atomic.Uint32) {
 		go aggregator(rows, aggregateMaps, &wg)
 	}
 
-	aggregateMapSafe := NewStationsMapSafe()
+	stationsMapSafe := NewStationsMapSafe()
 	for i := 0; i < FinalProcesses; i++ {
 		go func() {
-			superAggregator(&aggregateMapSafe, aggregateMaps)
+			superAggregator(&stationsMapSafe, aggregateMaps)
 		}()
 	}
 
-	srcFile, _ := os.Open(sf)
-	defer srcFile.Close()
-	srcScanner := bufio.NewScanner(srcFile)
+	_ = fileRowsScanner(sf, rows)
+	close(rows)
 
 	dstFile, _ := os.Create(df)
 	defer dstFile.Close()
 	dstWriter := bufio.NewWriter(dstFile)
 
-	for srcScanner.Scan() {
-		c.Add(1)
-		rows <- srcScanner.Text()
-	}
-	close(rows)
-
 	wg.Wait()
 
-	aggregatesSafe := aggregateMapSafe.M
+	// todo: use fileResultsWriter
+	stationsMap := stationsMapSafe.M
 
-	totalStations := len(aggregatesSafe)
+	totalStations := len(stationsMap)
 	stations := make([]string, totalStations)
 	aggregateRows := make([]string, totalStations)
 
 	j := 0
-	for station, _ := range aggregatesSafe {
+	for station, _ := range stationsMap {
 		stations[j] = station
 		j++
 	}
 	sort.Strings(stations)
 	for j, station := range stations {
-		aggregate := aggregatesSafe[station].A
+		aggregate := stationsMap[station].A
 		aggregateRows[j] = aggregate.String()
 	}
 
@@ -72,8 +66,48 @@ func Parser(sf string, df string, c *atomic.Uint32) {
 	_, _ = dstWriter.WriteString(strings.Join(aggregateRows, ", "))
 	_, _ = dstWriter.WriteString("}\n")
 	_ = dstWriter.Flush()
+}
 
-	return
+func fileRowsScanner(file string, rows chan string) error {
+	f, err := os.Open(file)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	wg := sync.WaitGroup{}
+	defer wg.Wait()
+
+	s := bufio.NewScanner(f)
+	for s.Scan() {
+		wg.Add(1)
+
+		go func() {
+			rows <- s.Text()
+			wg.Done()
+		}()
+	}
+
+	return nil
+}
+
+func fileResultsWriter(file string, stations StationMap) error {
+	f, err := os.Create(file)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	sortedRows := stations.ToSortedRows()
+
+	w := bufio.NewWriter(f)
+
+	_, _ = w.WriteString("{")
+	_, _ = w.WriteString(strings.Join(sortedRows, ", "))
+	_, _ = w.WriteString("}\n")
+	_ = w.Flush()
+
+	return nil
 }
 
 func aggregator(rows <-chan string, aggregateMaps chan StationMap, wg *sync.WaitGroup) {
