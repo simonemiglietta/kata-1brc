@@ -7,25 +7,23 @@ import (
 	"os"
 	"runtime"
 	"strings"
-	"sync"
 	"sync/atomic"
 )
 
 const (
-	ChanDetectionSize = 10
-	ChanAggregateSize = 5
-	FinalProcesses    = 2
+	RowsChanSize  int = 1_000
+	RowsChunkSize int = 1_000
 )
 
 func Parser(sf string, df string, counter *atomic.Uint32) {
 	nCpus := runtime.NumCPU()
-	rows := make(chan string, ChanDetectionSize)
+	chunks := make(chan [RowsChunkSize]string, RowsChanSize)
 
-	wg, stationMaps := newWorkersPool(nCpus, rows, counter)
+	wg, stationMaps := newWorkersPool(nCpus, chunks, counter)
 
-	_ = fileRowsScanner(sf, rows)
+	_ = fileRowsScanner(sf, chunks)
 
-	close(rows)
+	close(chunks)
 	wg.Wait()
 
 	stationMap := aggregateStationMaps(stationMaps)
@@ -33,7 +31,7 @@ func Parser(sf string, df string, counter *atomic.Uint32) {
 	_ = fileResultsWriter(df, stationMap)
 }
 
-func fileRowsScanner(file string, rows chan string) (err error) {
+func fileRowsScanner(file string, chunks chan [RowsChunkSize]string) (err error) {
 	f, err := os.Open(file)
 	if err != nil {
 		return err
@@ -43,19 +41,24 @@ func fileRowsScanner(file string, rows chan string) (err error) {
 		err = errors.Join(err, e)
 	}()
 
-	wg := sync.WaitGroup{}
-
 	s := bufio.NewScanner(f)
-	for s.Scan() {
-		wg.Add(1)
 
-		go func(t string) {
-			rows <- t
-			wg.Done()
-		}(s.Text())
+main:
+	for {
+		var chunk [RowsChunkSize]string
+
+		for i := 0; i < RowsChunkSize; i++ {
+			if !s.Scan() {
+				chunks <- chunk
+				break main
+			}
+
+			chunk[i] = s.Text()
+		}
+
+		chunks <- chunk
 	}
 
-	wg.Wait()
 	return err
 }
 

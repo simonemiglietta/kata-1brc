@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 )
 
-func newWorkersPool(workers int, rows <-chan string, counter *atomic.Uint32) (*sync.WaitGroup, *[]*models.StationMap) {
+func newWorkersPool(workers int, chunks <-chan [RowsChunkSize]string, counter *atomic.Uint32) (*sync.WaitGroup, *[]*models.StationMap) {
 	wg := sync.WaitGroup{}
 	sm := make([]*models.StationMap, workers)
 
@@ -15,25 +15,32 @@ func newWorkersPool(workers int, rows <-chan string, counter *atomic.Uint32) (*s
 
 	go func() {
 		for i := 0; i < workers; i++ {
-			sm[i] = rowsToStationMap(rows, &wg, counter)
+			sm[i] = rowsToStationMap(chunks, &wg, counter)
 		}
 	}()
 
 	return &wg, &sm
 }
 
-func rowsToStationMap(rows <-chan string, wg *sync.WaitGroup, counter *atomic.Uint32) *models.StationMap {
+func rowsToStationMap(chunks <-chan [RowsChunkSize]string, wg *sync.WaitGroup, counter *atomic.Uint32) *models.StationMap {
 	defer wg.Done()
 
 	sm := models.NewStationMap()
 
-	for row := range rows {
-		d := models.NewDetectionFromRow(row)
-		sm.AddDetection(d)
+	for rows := range chunks {
+		for _, row := range rows {
+			if row == "" {
+				// no more rows
+				break
+			}
 
-		go func() {
-			counter.Add(1)
-		}()
+			d := models.NewDetectionFromRow(row)
+			sm.AddDetection(d)
+
+			go func() {
+				counter.Add(1)
+			}()
+		}
 	}
 
 	return sm

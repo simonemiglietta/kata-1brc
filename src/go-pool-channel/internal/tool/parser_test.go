@@ -24,7 +24,6 @@ func Test_ParserJustMillion(t *testing.T) {
 }
 
 func Test_Parser(t *testing.T) {
-	actualFile := "measurements.out"
 	var c atomic.Uint32
 	tcs, err := test.GetCases()
 	if err != nil {
@@ -32,6 +31,7 @@ func Test_Parser(t *testing.T) {
 	}
 
 	for _, tc := range tcs {
+		actualFile := "./out/" + filepath.Base(tc.ExpectedFile)
 		tool.Parser(tc.SourceFile, actualFile, &c)
 
 		if !test.FileDeepCompare(tc.ExpectedFile, actualFile) {
