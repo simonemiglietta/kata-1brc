@@ -1,4 +1,4 @@
-package model
+package models
 
 import (
 	"fmt"
@@ -13,17 +13,21 @@ type Station struct {
 	}
 }
 
-func NewStationAggregateFromDetection(d Detection) (sa Station) {
-	sa.Name = d.StationName
-	sa.SamplesCount = 1
-	sa.Temperature.Sum = d.Temperature
-	sa.Temperature.Minimum = d.Temperature
-	sa.Temperature.Maximum = d.Temperature
+func NewStationFromDetection(d *Detection) *Station {
+	s := Station{
+		Name:         d.StationName,
+		SamplesCount: 1,
+		Temperature: struct{ Minimum, Maximum, Sum float32 }{
+			Minimum: d.Temperature,
+			Maximum: d.Temperature,
+			Sum:     d.Temperature,
+		},
+	}
 
-	return
+	return &s
 }
 
-func (s *Station) AddDetection(d Detection) {
+func (s *Station) AddDetection(d *Detection) {
 	t := d.Temperature
 
 	s.SamplesCount++
@@ -32,7 +36,7 @@ func (s *Station) AddDetection(d Detection) {
 	s.Temperature.Maximum = max(s.Temperature.Maximum, t)
 }
 
-func (s *Station) AddStation(o Station) {
+func (s *Station) AddStation(o *Station) {
 	s.SamplesCount += o.SamplesCount
 	s.Temperature.Sum += o.Temperature.Sum
 	s.Temperature.Minimum = min(s.Temperature.Minimum, o.Temperature.Minimum)

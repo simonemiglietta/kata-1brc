@@ -2,10 +2,10 @@ package tool
 
 import (
 	"bufio"
-	"lvciot/go-pool-channel/internal/model"
+	"errors"
+	"lvciot/go-pool-channel/internal/models"
 	"os"
 	"runtime"
-	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -17,86 +17,57 @@ const (
 	FinalProcesses    = 2
 )
 
-func Parser(sf string, df string, c *atomic.Uint32) {
+func Parser(sf string, df string, counter *atomic.Uint32) {
 	nCpus := runtime.NumCPU()
 	rows := make(chan string, ChanDetectionSize)
-	aggregateMaps := make(chan StationMap, ChanAggregateSize)
-	wg := sync.WaitGroup{}
 
-	for i := 0; i < nCpus; i++ {
-		wg.Add(1)
-		go aggregator(rows, aggregateMaps, &wg)
-	}
-
-	stationsMapSafe := NewStationsMapSafe()
-	for i := 0; i < FinalProcesses; i++ {
-		go func() {
-			superAggregator(&stationsMapSafe, aggregateMaps)
-		}()
-	}
+	wg, stationMaps := newWorkersPool(nCpus, rows, counter)
 
 	_ = fileRowsScanner(sf, rows)
+
 	close(rows)
-
-	dstFile, _ := os.Create(df)
-	defer dstFile.Close()
-	dstWriter := bufio.NewWriter(dstFile)
-
 	wg.Wait()
 
-	// todo: use fileResultsWriter
-	stationsMap := stationsMapSafe.M
+	stationMap := aggregateStationMaps(stationMaps)
 
-	totalStations := len(stationsMap)
-	stations := make([]string, totalStations)
-	aggregateRows := make([]string, totalStations)
-
-	j := 0
-	for station, _ := range stationsMap {
-		stations[j] = station
-		j++
-	}
-	sort.Strings(stations)
-	for j, station := range stations {
-		aggregate := stationsMap[station].A
-		aggregateRows[j] = aggregate.String()
-	}
-
-	_, _ = dstWriter.WriteString("{")
-	_, _ = dstWriter.WriteString(strings.Join(aggregateRows, ", "))
-	_, _ = dstWriter.WriteString("}\n")
-	_ = dstWriter.Flush()
+	_ = fileResultsWriter(df, stationMap)
 }
 
-func fileRowsScanner(file string, rows chan string) error {
+func fileRowsScanner(file string, rows chan string) (err error) {
 	f, err := os.Open(file)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		e := f.Close()
+		err = errors.Join(err, e)
+	}()
 
 	wg := sync.WaitGroup{}
-	defer wg.Wait()
 
 	s := bufio.NewScanner(f)
 	for s.Scan() {
 		wg.Add(1)
 
-		go func() {
-			rows <- s.Text()
+		go func(t string) {
+			rows <- t
 			wg.Done()
-		}()
+		}(s.Text())
 	}
 
-	return nil
+	wg.Wait()
+	return err
 }
 
-func fileResultsWriter(file string, stations StationMap) error {
+func fileResultsWriter(file string, stations *models.StationMap) (err error) {
 	f, err := os.Create(file)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		e := f.Close()
+		err = errors.Join(err, e)
+	}()
 
 	sortedRows := stations.ToSortedRows()
 
@@ -108,31 +79,4 @@ func fileResultsWriter(file string, stations StationMap) error {
 	_ = w.Flush()
 
 	return nil
-}
-
-func aggregator(rows <-chan string, aggregateMaps chan StationMap, wg *sync.WaitGroup) {
-	aggregateMap := make(StationMap)
-
-	for row := range rows {
-		detection := model.NewDetectionFromRow(row)
-		a, exist := aggregateMap[detection.StationName]
-
-		if exist {
-			a.AddDetection(detection)
-		} else {
-			a := model.NewStationAggregateFromDetection(detection)
-			aggregateMap[detection.StationName] = &a
-		}
-	}
-
-	aggregateMaps <- aggregateMap
-	wg.Done()
-}
-
-func superAggregator(aggregateMap *StationsMapSafe, aggregateMaps <-chan StationMap) {
-	for am := range aggregateMaps {
-		for _, a := range am {
-			aggregateMap.AddAggregate(*a)
-		}
-	}
 }

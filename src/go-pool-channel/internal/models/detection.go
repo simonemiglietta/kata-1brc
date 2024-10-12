@@ -1,4 +1,4 @@
-package model
+package models
 
 import (
 	"fmt"
@@ -13,6 +13,10 @@ type Detection struct {
 
 func NewDetectionFromRow(row string) (d Detection) {
 	split := strings.Split(row, ";")
+
+	if len(split) != 2 {
+		panic(row)
+	}
 
 	d.StationName = split[0]
 	t, _ := strconv.ParseFloat(split[1], 32)

@@ -9,12 +9,6 @@ import (
 	"testing"
 )
 
-type testCase struct {
-	name     string
-	source   string
-	expected string
-}
-
 func Test_ParserJustMillion(t *testing.T) {
 	_, b, _, _ := runtime.Caller(0)
 	src := filepath.Join(b, "../../../../../data/testcases/measurements-1m.txt")
@@ -40,7 +34,7 @@ func Test_Parser(t *testing.T) {
 	for _, tc := range tcs {
 		tool.Parser(tc.SourceFile, actualFile, &c)
 
-		if !test.FileTextCompare(tc.ExpectedFile, actualFile) {
+		if !test.FileDeepCompare(tc.ExpectedFile, actualFile) {
 			t.Errorf("file '%s' is not as expected", tc.Name)
 		}
 	}
