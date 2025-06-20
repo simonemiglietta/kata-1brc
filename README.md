@@ -5,6 +5,8 @@ This kata is based on [gunnarmorling/1brc](https://github.com/gunnarmorling/1brc
 Differently from the original project, the main goal is to explore tools and performances of different languages and/or
 algorithms.
 
+The following is a Golang based implementation 
+
 ## Initial Setup
 
 Working data are included in `data` folder. But this repository cannot include the full set of data because 1 billion
